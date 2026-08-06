@@ -1,1 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.smartdoc.ui.SmartDocController">
+    <!-- Top Menu Bar -->
+    <top>
+        <MenuBar BorderPane.alignment="CENTER">
+            <Menu text="File">
+                <MenuItem text="Scan Folders" onAction="#scanFolders" accelerator="Shortcut+S"/>
+                <MenuItem text="Start Monitoring" onAction="#startMonitoring" accelerator="Shortcut+M"/>
+                <MenuItem text="Stop Monitoring" onAction="#stopMonitoring" accelerator="Shortcut+X"/>
+                <SeparatorMenuItem/>
+                <MenuItem text="Exit" onAction="#exitApplication" accelerator="Shortcut+Q"/>
+            </Menu>
+            <Menu text="Tools">
+                <MenuItem text="Run Diagnostics" onAction="#runDiagnostics" accelerator="Shortcut+D"/>
+                <MenuItem text="Test ORB on Selected Image" onAction="#testOrbOnSelectedImage" accelerator="Shortcut+O"/>
+                <MenuItem text="Developer Performance" onAction="#openDeveloperPerformance"/>
+                <SeparatorMenuItem/>
+                <MenuItem text="OCR Settings" onAction="#openOcrSettings" accelerator="Shortcut+E"/>
+            </Menu>
+            <Menu text="Help">
+                <MenuItem text="About" onAction="#showAbout"/>
+            </Menu>
+        </MenuBar>
+    </top>
+
+    <!-- Left Panel - Controls -->
+    <left>
+        <VBox spacing="10" BorderPane.alignment="CENTER" style="-fx-padding: 10;">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <Label text="Document Search" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+            <!-- Folder Selection -->
+            <VBox spacing="5">
+                <Label text="Scan Directories:"/>
+                <ListView fx:id="folderListView" prefHeight="150">
+                    <VBox.margin>
+                        <Insets top="0" right="0" bottom="10" left="0"/>
+                    </VBox.margin>
+                </ListView>
+                <HBox spacing="5">
+                    <Button text="Add Folder" onAction="#addFolder" prefWidth="80"/>
+                    <Button text="Remove" onAction="#removeFolder" prefWidth="80"/>
+                </HBox>
+            </VBox>
+
+            <Separator/>
+
+            <!-- Search Section -->
+            <VBox spacing="5">
+                <Label text="Search by Image:"/>
+                <HBox spacing="5">
+                    <Button text="Select Image" onAction="#selectQueryImage" prefWidth="100"/>
+                    <Label fx:id="selectedImageLabel" text="No image selected" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <HBox spacing="5">
+                    <Button text="Search Similar" onAction="#searchSimilar" prefWidth="150" style="-fx-base: #4CAF50;"/>
+                </HBox>
+            </VBox>
+
+            <Separator/>
+
+            <!-- OCR Engine Selection -->
+            <VBox spacing="5">
+                <Label text="OCR Engine:"/>
+                <ComboBox fx:id="ocrEngineComboBox" prefWidth="200"/>
+            </VBox>
+
+            <Separator/>
+
+            <!-- Status -->
+            <VBox spacing="5">
+                <Label text="Status:"/>
+                <TextArea fx:id="statusTextArea" prefHeight="200" editable="false" wrapText="true"/>
+            </VBox>
+        </VBox>
+    </left>
+
+    <!-- Center - Results -->
+    <center>
+        <TabPane fx:id="centerTabPane" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
+            <tabs>
+                <Tab text="Search Results">
+                    <content>
+                        <VBox spacing="10" BorderPane.alignment="CENTER">
+                            <padding>
+                                <Insets top="10" right="10" bottom="10" left="10"/>
+                            </padding>
+
+                            <Label text="Search Results" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                            <!-- Results List -->
+                            <ListView fx:id="resultsListView" prefHeight="500" VBox.vgrow="ALWAYS">
+                                <VBox.margin>
+                                    <Insets top="0" right="0" bottom="10" left="0"/>
+                                </VBox.margin>
+                            </ListView>
+
+                            <!-- All Documents Section -->
+                            <Separator/>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="All Documents" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                <Button text="Load All" onAction="#loadAllDocuments"/>
+                            </HBox>
+                            <ListView fx:id="documentsListView" prefHeight="250">
+                                <VBox.margin>
+                                    <Insets top="0" right="0" bottom="10" left="0"/>
+                                </VBox.margin>
+                            </ListView>
+
+                            <!-- Selected Result Details -->
+                            <VBox spacing="5" style="-fx-border-color: lightgray; -fx-border-width: 1; -fx-padding: 10;">
+                                <Label text="Document Details" style="-fx-font-weight: bold;"/>
+
+                                <HBox spacing="5">
+                                    <Label text="Type:" style="-fx-font-weight: bold;"/>
+                                    <Label fx:id="docTypeLabel" text="-"/>
+                                </HBox>
+
+                                <HBox spacing="5">
+                                    <Label text="Similarity:" style="-fx-font-weight: bold;"/>
+                                    <Label fx:id="similarityLabel" text="-"/>
+                                </HBox>
+
+                                <Label text="Matched Image:" style="-fx-font-weight: bold;"/>
+                                <ImageView fx:id="matchedImageView" fitWidth="260" fitHeight="160" preserveRatio="true" smooth="true"/>
+
+                                <Label text="Summary:" style="-fx-font-weight: bold;"/>
+                                <TextArea fx:id="summaryTextArea" prefHeight="80" editable="false" wrapText="true"/>
+
+                                <Label text="Path:" style="-fx-font-weight: bold;"/>
+                                <TextField fx:id="filePathTextField" editable="false"/>
+                            </VBox>
+                        </VBox>
+                    </content>
+                </Tab>
+
+                <Tab fx:id="developerTab" text="Performance (Dev Only)" disable="true">
+                    <content>
+                        <VBox spacing="10" style="-fx-padding: 10;">
+                            <Label text="Developer Performance Dashboard" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                            <Label text="Visible only after Developer Performance unlock."/>
+
+                            <TableView fx:id="modelMetricsTable" prefHeight="220">
+                                <columns>
+                                    <TableColumn fx:id="modelNameColumn" text="Model" prefWidth="180"/>
+                                    <TableColumn fx:id="accuracyColumn" text="OCR Accuracy (%)" prefWidth="130"/>
+                                    <TableColumn fx:id="latencyColumn" text="Latency (ms)" prefWidth="120"/>
+                                    <TableColumn fx:id="successRateColumn" text="Success Rate (%)" prefWidth="130"/>
+                                    <TableColumn fx:id="retrievalColumn" text="Retrieval@10 (%)" prefWidth="140"/>
+                                </columns>
+                            </TableView>
+
+                            <BarChart fx:id="modelPerformanceChart" title="Model Performance Comparison" prefHeight="300">
+                                <xAxis>
+                                    <CategoryAxis fx:id="modelChartXAxis" label="OCR Model"/>
+                                </xAxis>
+                                <yAxis>
+                                    <NumberAxis fx:id="modelChartYAxis" label="Score (%)" autoRanging="false" lowerBound="0" upperBound="100" tickUnit="10"/>
+                                </yAxis>
+                            </BarChart>
+
+                            <HBox spacing="10">
+                                <Button text="Refresh Chart" onAction="#refreshPerformanceChart"/>
+                            </HBox>
+                        </VBox>
+                    </content>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </center>
+
+    <!-- Bottom - Progress Bar -->
+    <bottom>
+        <VBox BorderPane.alignment="CENTER">
+            <ProgressBar fx:id="progressBar" prefWidth="Infinity" progress="0.0"/>
+            <Label fx:id="progressLabel" text="Ready" style="-fx-padding: 5;"/>
+        </VBox>
+    </bottom>
+</BorderPane>
 
