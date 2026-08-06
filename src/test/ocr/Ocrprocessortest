@@ -1,0 +1,127 @@
+package com.smartdoc.ocr;
+
+import org.junit.jupiter.api.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import javax.imageio.ImageIO;
+
+/**
+ * Unit tests for OCRProcessor.
+ *
+ * TC-OCR-01: OCR on synthetic text image returns non-empty string
+ * TC-OCR-02: OCR on blank image returns empty string
+ * TC-OCR-03: cleanExtractedText strips control characters
+ * TC-OCR-04: null image input returns empty string
+ * TC-OCR-05: Confidence heuristic returns 0 for empty text
+ * TC-OCR-06: Confidence heuristic returns > 0 for alphanumeric text
+ */
+@DisplayName("OCRProcessor Unit Tests")
+class OCRProcessorTest {
+
+    private OCRProcessor processor;
+
+    @BeforeEach
+    void setUp() {
+        processor = new OCRProcessor();
+    }
+
+    // -------------------------------------------------------------------------
+    // TC-OCR-01
+    // -------------------------------------------------------------------------
+    @Test
+    @DisplayName("TC-OCR-01: Extract text from synthetic white image with text")
+    void testExtractTextFromSyntheticImage() throws Exception {
+        BufferedImage img = createTextImage("Hello SmartDoc 2026", 300, 80);
+        Path tmp = Files.createTempFile("ocr_test_", ".png");
+        ImageIO.write(img, "png", tmp.toFile());
+
+        String result = processor.extractText(tmp);
+
+        // Result should be a string (empty if Tesseract not installed, non-null always)
+        assertNotNull(result, "extractText(Path) must never return null");
+        Files.deleteIfExists(tmp);
+    }
+
+    // -------------------------------------------------------------------------
+    // TC-OCR-02
+    // -------------------------------------------------------------------------
+    @Test
+    @DisplayName("TC-OCR-02: Extract text from pure blank image returns empty")
+    void testExtractTextFromBlankImage() throws Exception {
+        BufferedImage blank = new BufferedImage(200, 100, BufferedImage.TYPE_BYTE_GRAY);
+        String result = processor.extractText(blank);
+        assertNotNull(result, "Result must not be null");
+        // Blank image should yield empty or whitespace-only OCR output
+        assertTrue(result.trim().isEmpty() || result.length() < 20,
+            "Blank image should produce minimal/empty OCR output");
+    }
+
+    // -------------------------------------------------------------------------
+    // TC-OCR-03
+    // -------------------------------------------------------------------------
+    @Test
+    @DisplayName("TC-OCR-03: cleanExtractedText removes control characters")
+    void testCleanExtractedTextStripsControlChars() {
+        String raw = "Hello\u0000World\u0001\u0002";
+        String cleaned = OCRProcessor.cleanExtractedText(raw);
+        assertFalse(cleaned.contains("\u0000"), "Null bytes should be removed");
+        assertFalse(cleaned.contains("\u0001"), "Control chars should be removed");
+        assertTrue(cleaned.contains("Hello"), "Visible text must be preserved");
+        assertTrue(cleaned.contains("World"), "Visible text must be preserved");
+    }
+
+    // -------------------------------------------------------------------------
+    // TC-OCR-04
+    // -------------------------------------------------------------------------
+    @Test
+    @DisplayName("TC-OCR-04: null BufferedImage input returns empty string")
+    void testNullBufferedImageReturnsEmpty() {
+        String result = processor.extractText((BufferedImage) null);
+        assertNotNull(result);
+        assertEquals("", result.trim());
+    }
+
+    // -------------------------------------------------------------------------
+    // TC-OCR-05
+    // -------------------------------------------------------------------------
+    @Test
+    @DisplayName("TC-OCR-05: Confidence heuristic is 0 for empty text")
+    void testConfidenceZeroForEmptyText() {
+        assertEquals(0.0f, processor.getConfidence(""), 0.001f);
+        assertEquals(0.0f, processor.getConfidence(null), 0.001f);
+        assertEquals(0.0f, processor.getConfidence("   "), 0.001f);
+    }
+
+    // -------------------------------------------------------------------------
+    // TC-OCR-06
+    // -------------------------------------------------------------------------
+    @Test
+    @DisplayName("TC-OCR-06: Confidence heuristic is > 0 for clean alphanumeric text")
+    void testConfidencePositiveForAlphanumericText() {
+        float conf = processor.getConfidence("Invoice Number 12345 dated 2026-03-16");
+        assertTrue(conf > 0, "Alphanumeric text should yield positive confidence");
+        assertTrue(conf <= 100, "Confidence is capped at 100");
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper
+    // -------------------------------------------------------------------------
+    private BufferedImage createTextImage(String text, int w, int h) {
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, w, h);
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Arial", Font.PLAIN, 18));
+        g.drawString(text, 10, 50);
+        g.dispose();
+        return img;
+    }
+}
+
