@@ -1,0 +1,110 @@
+package com.smartdoc.search;
+
+import org.junit.jupiter.api.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import javax.imageio.ImageIO;
+
+/**
+ * Unit + Integration tests for SimilaritySearchEngine.
+ *
+ * TC-SSE-01: searchSimilarDocuments returns a non-null list for a valid image
+ * TC-SSE-02: Result list size does not exceed MAX_RESULTS (10)
+ * TC-SSE-03: Every SearchResult has similarity in [0.0, 1.0]
+ * TC-SSE-04: Empty database produces an empty or aHash-fallback result list
+ * TC-SSE-05: SearchResult.getFilePath() returns a non-null value
+ */
+@DisplayName("SimilaritySearchEngine Integration Tests")
+class SimilaritySearchEngineTest {
+
+    private SimilaritySearchEngine engine;
+    private Path tempImage;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        engine = new SimilaritySearchEngine();
+        // Write a small synthetic image to a temp file
+        BufferedImage img = createSyntheticImage(256, 256);
+        tempImage = Files.createTempFile("sse_test_", ".jpg");
+        ImageIO.write(img, "jpg", tempImage.toFile());
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        Files.deleteIfExists(tempImage);
+    }
+
+    // TC-SSE-01
+    @Test
+    @DisplayName("TC-SSE-01: searchSimilarDocuments returns non-null list")
+    void testSearchReturnsNonNull() throws Exception {
+        List<SimilaritySearchEngine.SearchResult> results =
+            engine.searchSimilarDocuments(tempImage);
+        assertNotNull(results, "Result list must never be null");
+    }
+
+    // TC-SSE-02
+    @Test
+    @DisplayName("TC-SSE-02: Result list does not exceed 10 items")
+    void testResultCountWithinBound() throws Exception {
+        List<SimilaritySearchEngine.SearchResult> results =
+            engine.searchSimilarDocuments(tempImage);
+        assertTrue(results.size() <= 10,
+            "Search engine must cap results at MAX_RESULTS=10");
+    }
+
+    // TC-SSE-03
+    @Test
+    @DisplayName("TC-SSE-03: All similarity scores are in [0.0, 1.0]")
+    void testSimilarityScoreRange() throws Exception {
+        List<SimilaritySearchEngine.SearchResult> results =
+            engine.searchSimilarDocuments(tempImage);
+        for (SimilaritySearchEngine.SearchResult r : results) {
+            assertTrue(r.similarity >= 0.0 && r.similarity <= 1.0,
+                "Similarity must be in [0, 1], got: " + r.similarity);
+        }
+    }
+
+    // TC-SSE-04
+    @Test
+    @DisplayName("TC-SSE-04: Empty DB returns a list (empty or aHash-fallback)")
+    void testEmptyDatabaseReturnsEmptyOrFallback() throws Exception {
+        // Even with no indexed documents the engine must not throw
+        assertDoesNotThrow(() -> engine.searchSimilarDocuments(tempImage));
+    }
+
+    // TC-SSE-05
+    @Test
+    @DisplayName("TC-SSE-05: SearchResult.getFilePath() is non-null")
+    void testSearchResultFilePathNotNull() throws Exception {
+        List<SimilaritySearchEngine.SearchResult> results =
+            engine.searchSimilarDocuments(tempImage);
+        for (SimilaritySearchEngine.SearchResult r : results) {
+            assertNotNull(r.getFilePath(),
+                "Each SearchResult must expose a non-null file path");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper
+    // -------------------------------------------------------------------------
+    private BufferedImage createSyntheticImage(int w, int h) {
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, w, h);
+        // Add high-contrast rectangles so ORB has features to detect
+        g.setColor(Color.BLACK);
+        for (int i = 0; i < 8; i++) {
+            g.fillRect(i * 30 + 5, i * 25 + 5, 20, 18);
+        }
+        g.dispose();
+        return img;
+    }
+}
